@@ -166,73 +166,83 @@ def visualize_topics_val(dataloader, parallel_encoder, parallel_decoder, word_no
 
 
 def print_sampled_sent(selected_topic_idx, generated_sent, top_index_im, idx2word_freq, outf, print_prefix, selected_word_idx=None):
-    def insert_substring(sent, insert_loc, insert_substring):
-        return sent[:insert_loc] + insert_substring + sent[insert_loc:]
-    
-    def highlight_words(word_nn, generated_sent, topic_l2_word_d2_count_t):
-        def find_all(a_str, sub):
-            start = 0
-            while True:
-                start = a_str.find(sub, start)
-                if start == -1: return
-                yield start
-                start += len(sub) # use start += 1 to find overlapping matches
-        index_shift = 0
+  def insert_substring(sent, insert_loc, insert_substring):
+      return sent[:insert_loc] + insert_substring + sent[insert_loc:]
+  
+  def highlight_words(word_nn, generated_sent, topic_l2_word_d2_count_t):
+      # outf.write('CHK 2 :: generated_sent 1 before coloring' + generated_sent + '\n')
+      def find_all(a_str, sub):
+          start = 0
+          while True:
+              start = a_str.find(sub, start)
+              if start == -1: return
+              yield start
+              start += len(sub) # use start += 1 to find overlapping matches
+      index_shift = 0
 
-        #for m in re.finditer(word_nn, generated_sent):
-        #    start = m.start() + index_shift
-        #    end = m.end() + index_shift
-        for m_start in find_all(generated_sent, word_nn):
-            start = m_start + index_shift
-            end = m_start + len(word_nn) + index_shift
-            #print(generated_sent)
-            #print(word_nn)
-            #print(start, end)
-            #if start != 0 and generated_sent[start-1] != ' ' and end >= len(generated_sent) - 1 and generated_sent[end+1] != ' ':
-            if end < len(generated_sent) - 1 and generated_sent[end+1] != ' ' and start != 0 and generated_sent[start-1] != ' ': 
-                continue
-            if word_nn not in topic_l2_word_d2_count_t:
-                topic_l2_word_d2_count_t[word_nn] = 0
-            topic_l2_word_d2_count_t[word_nn] += 1
-            prev_start = generated_sent[:start].rfind(colorama.Fore.RED)
-            prev_end = generated_sent[:start].rfind(colorama.Style.RESET_ALL)
-            if prev_start > prev_end:
-                continue
-            generated_sent = insert_substring(generated_sent, end, colorama.Style.RESET_ALL)
-            generated_sent = insert_substring(generated_sent, start, colorama.Fore.RED)
-            index_shift += len(colorama.Style.RESET_ALL) + len(colorama.Fore.RED)
-        return generated_sent
-        
-    num_selected = len(selected_topic_idx)
-    top_k = top_index_im.size(0)
-    topic_l2_word_d2_count = [{} for t in range(num_selected)]
-    for t in range(num_selected):
-        topic_idx = selected_topic_idx[t]
-        for k in range(top_k):
-            #word_nn = idx2word_freq[top_index[i_sent,m,k,topic_idx].item()][0]
-            #print(top_index_im.size())
-            #print(topic_idx)
+      #for m in re.finditer(word_nn, generated_sent):
+      #    start = m.start() + index_shift
+      #    end = m.end() + index_shift
+      # for m_start in find_all(generated_sent, word_nn):
+      #     start = m_start + index_shift
+      #     end = m_start + len(word_nn) + index_shift
+      #     print(generated_sent)
+      #     #print(word_nn)
+      #     #print(start, end)
+      #     #if start != 0 and generated_sent[start-1] != ' ' and end >= len(generated_sent) - 1 and generated_sent[end+1] != ' ':
+      #     if end < len(generated_sent) - 1 and generated_sent[end+1] != ' ' and start != 0 and generated_sent[start-1] != ' ': 
+      #         continue
+      #     if word_nn not in topic_l2_word_d2_count_t:
+      #         topic_l2_word_d2_count_t[word_nn] = 0
+      #     topic_l2_word_d2_count_t[word_nn] += 1
+      #     prev_start = generated_sent[:start].rfind(colorama.Fore.RED)
+      #     prev_end = generated_sent[:start].rfind(colorama.Style.RESET_ALL)
+      #     if prev_start > prev_end:
+      #         continue
+      #     generated_sent = insert_substring(generated_sent, end, colorama.Style.RESET_ALL)
+      #     generated_sent = insert_substring(generated_sent, start, colorama.Fore.RED)
+      #     index_shift += len(colorama.Style.RESET_ALL) + len(colorama.Fore.RED)
+      return generated_sent
+      
+  
+  num_selected = len(selected_topic_idx)
+  top_k = top_index_im.size(0)
+  topic_l2_word_d2_count = [{} for t in range(num_selected)]
+  
+  for t in range(num_selected):
+      topic_idx = selected_topic_idx[t]
+      for k in range(top_k):
+          #word_nn = idx2word_freq[top_index[i_sent,m,k,topic_idx].item()][0]
+          #print(top_index_im.size())
+          #print(topic_idx)
 
-            word_nn = idx2word_freq[top_index_im[k,topic_idx].item()][0]
-            generated_sent = highlight_words(word_nn, generated_sent, topic_l2_word_d2_count[t])
-    num_word = 0
-    if selected_word_idx is not None:
-        num_word = len(selected_word_idx)
-        word_l2_word_d2_count = [{} for t in range(num_word)]
-        for t in range(num_word):
-            word_nn = idx2word_freq[selected_word_idx[t]][0]
-            generated_sent = highlight_words(word_nn, generated_sent, word_l2_word_d2_count[t])
-    outf.write(print_prefix + ': ' + generated_sent + '\n')
-    for t in range(num_selected):
-        if len(topic_l2_word_d2_count[t]) == 0:
-            continue
-        topic_idx = selected_topic_idx[t]
-        outf.write(str(topic_idx)+' topic: '+str(topic_l2_word_d2_count[t])+'\n')
-    for t in range(num_word):
-        if len(word_l2_word_d2_count[t]) == 0:
-            continue
-        outf.write('word: '+str(word_l2_word_d2_count[t])+'\n')
-    outf.write('\n')
+          word_nn = idx2word_freq[top_index_im[k,topic_idx].item()][0]
+          # outf.write('CHK 3 :: word_nn' + word_nn + '\n')
+          generated_sent = highlight_words(word_nn, generated_sent, topic_l2_word_d2_count[t])
+          # outf.write('CHK 4 :: generated_sent' + generated_sent + '\n')
+  num_word = 0
+  if selected_word_idx is not None:
+      num_word = len(selected_word_idx)
+      word_l2_word_d2_count = [{} for t in range(num_word)]
+      for t in range(num_word):
+          word_nn = idx2word_freq[selected_word_idx[t]][0]
+          # outf.write('CHK 5 :: word_nn' + word_nn + '\n')
+          generated_sent = highlight_words(word_nn, generated_sent, word_l2_word_d2_count[t])
+          # outf.write('CHK 6 :: generated_sent' + generated_sent + '\n')
+  x1 = generated_sent 
+  # outf.write('\n HERIOOO \t'+print_prefix + ': ' + generated_sent + '\n')
+  for t in range(num_selected):
+      if len(topic_l2_word_d2_count[t]) == 0:
+          continue
+      topic_idx = selected_topic_idx[t]
+      outf.write(str(topic_idx)+' topic: '+str(topic_l2_word_d2_count[t])+'\n')
+  for t in range(num_word):
+      if len(word_l2_word_d2_count[t]) == 0:
+          continue
+      # x2 = 'word: '+str(word_l2_word_d2_count[t])+'\n'
+      outf.write('word: '+str(word_l2_word_d2_count[t])+'\n')
+  return x1
+  outf.write('\n')
 
 def saparateParagraph(paragraph):
     i = 0
