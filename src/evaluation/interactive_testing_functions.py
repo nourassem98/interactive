@@ -129,12 +129,14 @@ def conditional_generation(selected_conditions, gen_sent_len, num_sent_gen, word
     selected_topic_idx = []
     selected_word_idx = []
     for x in selected_conditions:
+      # print('X :: ', x)
         if isinstance(x, int):
             selected_topic_idx.append(x)
         else:
             if x not in word_d2_idx:
                 print('Warning: Ignore the word '+x+' because it is too rare')
                 continue
+            # print('SELECTED INDX  :: ', selected_word_idx)
             selected_word_idx.append(word_d2_idx[x])
     selected_topic_idx = torch.tensor(np.sort(selected_topic_idx), dtype=torch.long, device = device_conditional)
     selected_word_idx = torch.tensor(selected_word_idx, dtype=torch.long, device = device_conditional)
@@ -159,14 +161,24 @@ def conditional_generation(selected_conditions, gen_sent_len, num_sent_gen, word
     output = utils_testing.sample_seq(model_condition, feature_expanded, insert_loc_truncated[truncate_idx:], future_emb_chosen_arr[truncate_idx:], gen_sent_len, device_conditional)
     output_org = utils_testing.sample_seq(model_condition, feature_expanded, None, None, gen_sent_len, device_conditional)
     
+    x1 = []
+    x2 = []
     print(colorama.Fore.BLUE+"Prompt: "+tokenizer_GPT2.decode(feature[0,start_int:end_int])+'\n'+colorama.Style.RESET_ALL)
     for j in range(num_sent_gen):
         generated_sent = tokenizer_GPT2.convert_tokens_to_string( [tokenizer_GPT2._convert_id_to_token(x) for x in output[j, :].tolist()] )
         generated_sent = generated_sent.replace('â',"'").replace('â','-').replace('\n'," ")
-        utils_testing.print_sampled_sent(selected_topic_idx.tolist(), generated_sent, top_index[0,:,:], idx2word_freq, sys.stdout, 'conditional '+ str(j), selected_word_idx.tolist())
+        
+        x = utils_testing.print_sampled_sent(selected_topic_idx.tolist(), generated_sent, top_index[0,:,:], idx2word_freq, sys.stdout, 'conditional '+ str(j), selected_word_idx.tolist())
+        x1.append(x)
+        # print('AWAL G :: ', j, x1)
+    
     
     print("\n"+colorama.Fore.BLUE+"Prompt: "+tokenizer_GPT2.decode(feature[0,start_int:end_int])+'\n'+colorama.Style.RESET_ALL)
     for j in range(num_sent_gen):
         generated_sent_org = tokenizer_GPT2.convert_tokens_to_string( [tokenizer_GPT2._convert_id_to_token(x) for x in output_org[j, :].tolist()] )
         generated_sent_org = generated_sent_org.replace('â',"'").replace('â','-').replace('\n'," ")
-        utils_testing.print_sampled_sent(selected_topic_idx.tolist(), generated_sent_org, top_index[0,:,:], idx2word_freq, sys.stdout, 'original '+ str(j), selected_word_idx.tolist())
+        x = utils_testing.print_sampled_sent(selected_topic_idx.tolist(), generated_sent_org, top_index[0,:,:], idx2word_freq, sys.stdout, 'original '+ str(j), selected_word_idx.tolist())
+        x2.append(x)
+    
+    print('LAST LINE')
+    return (x1, x2)
